@@ -1,33 +1,4 @@
-import {
-  Users,
-  Landmark,
-  CheckCircle2,
-  Clock,
-  CircleDollarSign,
-  IndianRupee,
-  AlertTriangle,
-  UserPlus,
-  TrendingUp,
-} from "lucide-react";
-import { StatCard } from "@/components/StatCard";
-import { dashboardStats, revenueData, loanDistribution, recentActivities, topDefaulters } from "@/lib/mock-data";
-import {
-  AreaChart,
-  Area,
-  XAxis,
-  YAxis,
-  CartesianGrid,
-  Tooltip,
-  ResponsiveContainer,
-  PieChart,
-  Pie,
-  Cell,
-  BarChart,
-  Bar,
-} from "recharts";
-
-const formatCurrency = (v: number) =>
-  "₹" + (v >= 100000 ? (v / 100000).toFixed(1) + "L" : v.toLocaleString("en-IN"));
+import { TotalCustomersCard } from "@/components/dashboard/TotalCustomersCard";
 
 export default function Dashboard() {
   return (
@@ -39,11 +10,11 @@ export default function Dashboard() {
 
       {/* Stats Grid */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        <StatCard title="Total Customers" value={dashboardStats.totalCustomers} icon={Users} variant="primary" trend={{ value: 7.2, label: "this month" }} />
-        {/* Loan stats hidden for initial launch */}
+        <TotalCustomersCard />
+        {/* Additional cards like ActiveLoansCard, PendingEMICard can be added here later */}
       </div>
 
-      {/* Charts and activity hidden for initial launch */}
+      {/* Placeholder for future sections */}
       {/* 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         ...
