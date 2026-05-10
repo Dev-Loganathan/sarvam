@@ -4,7 +4,7 @@ import { Customer } from "@/lib/customer-types";
 
 // Fetch customers from API
 export function useCustomers() {
-  const { data = [] } = useQuery({
+  const { data: customers = [], isLoading } = useQuery({
     queryKey: ['customers'],
     queryFn: async (): Promise<Customer[]> => {
       const response = await apiClient.get('/customers');
@@ -12,7 +12,7 @@ export function useCustomers() {
     }
   });
 
-  return data;
+  return { customers, isLoading };
 }
 
 // Fetch single customer by ID

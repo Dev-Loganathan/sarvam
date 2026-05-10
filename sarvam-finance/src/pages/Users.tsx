@@ -2,12 +2,13 @@ import { useState, useEffect } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import {
   UserPlus, Edit2, ShieldCheck, ShieldOff, KeyRound, Search,
-  Users as UsersIcon, Shield, Loader2
+  Users as UsersIcon, Shield
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
+import { Skeleton } from "@/components/ui/skeleton";
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue
 } from "@/components/ui/select";
@@ -172,8 +173,40 @@ function UsersTab({
 
       <div className="bg-card rounded-xl border border-border overflow-hidden">
         {isLoading ? (
-          <div className="flex items-center justify-center py-12">
-            <Loader2 className="w-6 h-6 animate-spin text-muted-foreground" />
+          <div className="overflow-x-auto">
+            <table className="w-full">
+              <thead>
+                <tr className="border-b border-border bg-muted/50">
+                  <th className="text-left p-3 font-medium">User</th>
+                  <th className="text-left p-3 font-medium">Role</th>
+                  <th className="text-left p-3 font-medium">Status</th>
+                  <th className="text-left p-3 font-medium">Last Login</th>
+                  <th className="text-right p-3 font-medium">Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                {[...Array(5)].map((_, i) => (
+                  <tr key={i} className="border-b border-border last:border-0">
+                    <td className="p-3">
+                      <div className="space-y-1.5">
+                        <Skeleton className="h-4 w-32" />
+                        <Skeleton className="h-3 w-40" />
+                      </div>
+                    </td>
+                    <td className="p-3"><Skeleton className="h-5 w-20 rounded-md" /></td>
+                    <td className="p-3"><Skeleton className="h-5 w-16 rounded-md" /></td>
+                    <td className="p-3"><Skeleton className="h-4 w-28" /></td>
+                    <td className="p-3 text-right">
+                      <div className="flex items-center justify-end gap-1">
+                        <Skeleton className="w-8 h-8 rounded-md" />
+                        <Skeleton className="w-8 h-8 rounded-md" />
+                        <Skeleton className="w-8 h-8 rounded-md" />
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
           </div>
         ) : users.length === 0 ? (
           <p className="text-center text-muted-foreground py-12 text-sm">No users found</p>

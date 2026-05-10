@@ -6,6 +6,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Skeleton } from "@/components/ui/skeleton";
 import { useCustomers, useUpdateCustomerStatus } from "@/hooks/use-customers";
 import { CibilScore, RiskBadge } from "@/components/customer/RiskBadge";
 import { InactiveDialog } from "@/components/customer/InactiveDialog";
@@ -27,7 +28,7 @@ const FILTERS: { key: FilterKey; label: string }[] = [
 export default function Customers() {
   const navigate = useNavigate();
   const { toast } = useToast();
-  const customers = useCustomers();
+  const { customers, isLoading } = useCustomers();
   const { mutate: updateStatus } = useUpdateCustomerStatus();
   const [search, setSearch] = useState("");
   const [filter, setFilter] = useState<FilterKey>("all");
@@ -128,8 +129,44 @@ export default function Customers() {
           </div>
         </div>
 
-        {/* Empty state */}
-        {filtered.length === 0 ? (
+        {/* Empty state & Loading state */}
+        {isLoading ? (
+          <div className="overflow-x-auto">
+            <table className="w-full">
+              <thead>
+                <tr className="border-b border-border">
+                  {["Customer", "Mobile", "City", "Occupation", "CIBIL", "Risk", "Status", "Actions"].map((h) => (
+                    <th key={h} className="text-left text-xs font-medium text-muted-foreground p-4">
+                      {h}
+                    </th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {[...Array(5)].map((_, i) => (
+                  <tr key={i} className="border-b border-border/50">
+                    <td className="p-4">
+                      <div className="flex items-center gap-3">
+                        <Skeleton className="w-9 h-9 rounded-full" />
+                        <div className="space-y-2">
+                          <Skeleton className="h-4 w-24" />
+                          <Skeleton className="h-3 w-16" />
+                        </div>
+                      </div>
+                    </td>
+                    <td className="p-4"><Skeleton className="h-4 w-20" /></td>
+                    <td className="p-4"><Skeleton className="h-4 w-16" /></td>
+                    <td className="p-4"><Skeleton className="h-4 w-20" /></td>
+                    <td className="p-4"><Skeleton className="h-4 w-12" /></td>
+                    <td className="p-4"><Skeleton className="h-6 w-20 rounded-full" /></td>
+                    <td className="p-4"><Skeleton className="h-5 w-16 rounded-full" /></td>
+                    <td className="p-4"><Skeleton className="h-8 w-24" /></td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        ) : filtered.length === 0 ? (
           <div className="p-12 text-center">
             <div className="w-14 h-14 rounded-full bg-secondary mx-auto flex items-center justify-center mb-3">
               <Plus className="w-6 h-6 text-muted-foreground" />
