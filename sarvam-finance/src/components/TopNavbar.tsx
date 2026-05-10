@@ -13,7 +13,7 @@ export function TopNavbar() {
     <header className="h-16 border-b border-border bg-card/80 backdrop-blur-sm flex items-center justify-between px-6 sticky top-0 z-20">
       <div className="relative w-80">
         <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-        <Input placeholder="Search customers, loans, chits..." className="pl-9 bg-secondary/50 border-0" />
+        <Input placeholder="Search customers..." className="pl-9 bg-secondary/50 border-0" />
       </div>
       <div className="flex items-center gap-4">
         <button className="relative p-2 rounded-lg hover:bg-secondary transition-colors">

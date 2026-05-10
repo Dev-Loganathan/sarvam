@@ -37,10 +37,12 @@ const App = () => (
             <Route path="/customers/new" element={<ProtectedRoute permission="customer:create"><AppLayout><CustomerNew /></AppLayout></ProtectedRoute>} />
             <Route path="/customers/:id" element={<ProtectedRoute permission="customer:view"><AppLayout><CustomerProfile /></AppLayout></ProtectedRoute>} />
             <Route path="/customers/:id/edit" element={<ProtectedRoute permission="customer:edit"><AppLayout><CustomerEdit /></AppLayout></ProtectedRoute>} />
+            {/* 
             <Route path="/loans" element={<ProtectedRoute permission="loan:view"><AppLayout><Loans /></AppLayout></ProtectedRoute>} />
             <Route path="/chit-funds" element={<ProtectedRoute permission="chit:view"><AppLayout><ChitFunds /></AppLayout></ProtectedRoute>} />
             <Route path="/payments" element={<ProtectedRoute permission="payment:view"><AppLayout><Payments /></AppLayout></ProtectedRoute>} />
             <Route path="/reports" element={<ProtectedRoute permission="report:view"><AppLayout><Reports /></AppLayout></ProtectedRoute>} />
+            */}
             <Route path="/notifications" element={<ProtectedRoute><AppLayout><Notifications /></AppLayout></ProtectedRoute>} />
             <Route path="/settings" element={<ProtectedRoute><AppLayout><SettingsPage /></AppLayout></ProtectedRoute>} />
             <Route path="/users" element={<ProtectedRoute permission="user:view"><AppLayout><Users /></AppLayout></ProtectedRoute>} />
