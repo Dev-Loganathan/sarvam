@@ -1,0 +1,168 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model Customer {
+  id               String             @id @default(uuid())
+  customerCode     String             @unique
+  firstName        String
+  lastName         String?
+  gender           String
+  dob              String
+  mobile           String
+  altMobile        String?
+  email            String?
+  maritalStatus    String
+  photoDataUrl     String?            // In a real app, this should be a URL to S3
+  
+  currentAddress   String
+  permanentAddress String
+  city             String
+  state            String
+  pincode          String
+  landmark         String?
+  residenceType    String
+
+  aadhaarNumber    String
+  panNumber        String
+  voterId          String?
+  drivingLicense   String?
+  passport         String?
+
+  occupationType   String
+  companyName      String?
+  designation      String?
+  workExperience   String?
+  monthlySalary    Float
+  additionalIncome Float?
+  businessName     String?
+  bankName         String
+  accountNumber    String
+  ifscCode         String
+
+  fatherName       String
+  motherName       String
+  spouseName       String?
+  nomineeName      String
+  nomineeRelation  String
+  reference1Name   String
+  reference1Mobile String
+  reference2Name   String?
+  reference2Mobile String?
+
+  cibilScore       Int
+  existingLoans    Float
+  monthlyEmi       Float
+  riskLevel        String
+  category         String
+
+  status           String             @default("active")
+  inactiveReason   String?
+  inactiveNote     String?
+  inactiveAt       DateTime?
+
+  createdAt        DateTime           @default(now())
+  updatedAt        DateTime           @updatedAt
+
+  documents        CustomerDocument[]
+  notes            CustomerNote[]
+  auditLogs        AuditEntry[]
+}
+
+model CustomerDocument {
+  id         String   @id @default(uuid())
+  customerId String
+  customer   Customer @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  type       String
+  name       String
+  mimeType   String
+  size       Int
+  dataUrl    String   // In a real app, store URL to S3
+  uploadedAt DateTime @default(now())
+}
+
+model CustomerNote {
+  id         String   @id @default(uuid())
+  customerId String
+  customer   Customer @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  note       String
+  createdBy  String
+  createdAt  DateTime @default(now())
+}
+
+model AuditEntry {
+  id         String   @id @default(uuid())
+  customerId String
+  customer   Customer @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  action     String
+  details    String?
+  user       String
+  createdAt  DateTime @default(now())
+}
+
+// ─── Auth & RBAC ──────────────────────────────────────────────
+
+model User {
+  id              String            @id @default(uuid())
+  email           String            @unique
+  passwordHash    String
+  firstName       String
+  lastName        String?
+  mobile          String?
+  isActive        Boolean           @default(true)
+  roleId          String
+  role            Role              @relation(fields: [roleId], references: [id])
+  lastLoginAt     DateTime?
+  createdAt       DateTime          @default(now())
+  updatedAt       DateTime          @updatedAt
+  refreshTokens   RefreshToken[]
+  passwordHistory PasswordHistory[]
+}
+
+model Role {
+  id          String           @id @default(uuid())
+  name        String           @unique
+  displayName String
+  description String?
+  isSystem    Boolean          @default(false)
+  createdAt   DateTime         @default(now())
+  users       User[]
+  permissions RolePermission[]
+}
+
+model Permission {
+  id          String           @id @default(uuid())
+  code        String           @unique
+  module      String
+  description String?
+  roles       RolePermission[]
+}
+
+model RolePermission {
+  roleId       String
+  permissionId String
+  role         Role       @relation(fields: [roleId], references: [id], onDelete: Cascade)
+  permission   Permission @relation(fields: [permissionId], references: [id], onDelete: Cascade)
+  @@id([roleId, permissionId])
+}
+
+model RefreshToken {
+  id        String   @id @default(uuid())
+  token     String   @unique
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+}
+
+model PasswordHistory {
+  id           String   @id @default(uuid())
+  userId       String
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  passwordHash String
+  createdAt    DateTime @default(now())
+}
