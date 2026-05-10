@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import {
   UserPlus, Edit2, ShieldCheck, ShieldOff, KeyRound, Search,
-  Users as UsersIcon, Shield
+  Users as UsersIcon, Shield, Loader2
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
