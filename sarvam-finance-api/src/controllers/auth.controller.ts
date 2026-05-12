@@ -2,14 +2,7 @@ import { Request, Response } from 'express';
 import jwt from 'jsonwebtoken';
 import bcrypt from 'bcryptjs';
 import crypto from 'crypto';
-import { PrismaClient } from '@prisma/client';
-import { Pool } from 'pg';
-import { PrismaPg } from '@prisma/adapter-pg';
-
-const connectionString = process.env.DATABASE_URL;
-const pool = new Pool({ connectionString });
-const adapter = new PrismaPg(pool);
-const prisma = new PrismaClient({ adapter });
+import { prisma } from '../lib/db';
 
 const JWT_SECRET = process.env.JWT_SECRET || 'sarvam-finance-jwt-secret-change-in-production';
 const ACCESS_TOKEN_EXPIRY = '15m';
@@ -30,6 +23,7 @@ function generateRefreshToken(): string {
  */
 export const login = async (req: Request, res: Response) => {
   try {
+    console.log(req.body);
     const { email, password } = req.body;
 
     if (!email || !password) {
