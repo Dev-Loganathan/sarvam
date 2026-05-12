@@ -2,10 +2,6 @@ import express from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
 import cookieParser from 'cookie-parser';
-import dns from 'node:dns';
-
-// Force IPv4 for database connections (Fixes ENETUNREACH on Render)
-dns.setDefaultResultOrder('ipv4first');
 
 dotenv.config();
 

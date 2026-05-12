@@ -1,6 +1,10 @@
 import { PrismaClient } from '@prisma/client';
 import { Pool } from 'pg';
 import { PrismaPg } from '@prisma/adapter-pg';
+import dns from 'node:dns';
+
+// Force IPv4 for database connections (Fixes ENETUNREACH on Render)
+dns.setDefaultResultOrder('ipv4first');
 
 const connectionString = process.env.DATABASE_URL;
 
