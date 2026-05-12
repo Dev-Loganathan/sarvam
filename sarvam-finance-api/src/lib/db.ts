@@ -4,12 +4,19 @@ import { PrismaPg } from '@prisma/adapter-pg';
 
 const connectionString = process.env.DATABASE_URL;
 
-// Supabase requires SSL. rejectUnauthorized: false is common for hosted databases.
+if (!connectionString) {
+  console.error('DATABASE_URL is not defined in environment variables');
+} else {
+  const maskedUrl = connectionString.replace(/:([^:@]+)@/, ':****@');
+  console.log('Initializing Prisma with connection string:', maskedUrl);
+}
+
 const pool = new Pool({ 
   connectionString,
   ssl: {
     rejectUnauthorized: false
-  }
+  },
+  connectionTimeoutMillis: 10000, // 10 seconds timeout
 });
 
 const adapter = new PrismaPg(pool);
