@@ -84,8 +84,8 @@ export const login = async (req: Request, res: Response) => {
     // Set refresh token as HttpOnly cookie
     res.cookie('refreshToken', refreshToken, {
       httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
-      sameSite: 'strict',
+      secure: true, // Required for sameSite: 'none'
+      sameSite: 'none', // Required for cross-domain (Vercel to Render)
       maxAge: REFRESH_TOKEN_DAYS * 24 * 60 * 60 * 1000,
       path: '/api/auth',
     });
@@ -150,13 +150,13 @@ export const refresh = async (req: Request, res: Response) => {
 
     if (stored.expiresAt < new Date()) {
       await prisma.refreshToken.delete({ where: { id: stored.id } });
-      res.clearCookie('refreshToken', { path: '/api/auth' });
+      res.clearCookie('refreshToken', { path: '/api/auth', sameSite: 'none', secure: true });
       return res.status(401).json({ error: 'Session expired. Please log in again.', code: 'TOKEN_EXPIRED' });
     }
 
     if (!stored.user.isActive) {
       await prisma.refreshToken.deleteMany({ where: { userId: stored.user.id } });
-      res.clearCookie('refreshToken', { path: '/api/auth' });
+      res.clearCookie('refreshToken', { path: '/api/auth', sameSite: 'none', secure: true });
       return res.status(403).json({ error: 'Account deactivated' });
     }
 
@@ -197,7 +197,7 @@ export const logout = async (req: Request, res: Response) => {
       await prisma.refreshToken.deleteMany({ where: { token } });
     }
 
-    res.clearCookie('refreshToken', { path: '/api/auth' });
+    res.clearCookie('refreshToken', { path: '/api/auth', sameSite: 'none', secure: true });
     res.json({ message: 'Logged out successfully' });
   } catch (error) {
     console.error('Logout error:', error);
