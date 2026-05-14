@@ -111,3 +111,60 @@ export function useRemoveDocument() {
     }
   });
 }
+
+// ─── Drafts ──────────────────────────────────────────────
+
+export interface CustomerDraft {
+  id: string;
+  data: any;
+  step: number;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export function useCustomerDrafts() {
+  return useQuery({
+    queryKey: ['customer-drafts'],
+    queryFn: async (): Promise<CustomerDraft[]> => {
+      const response = await apiClient.get('/customers/drafts');
+      return response.data;
+    }
+  });
+}
+
+export function useCustomerDraft(id?: string) {
+  return useQuery({
+    queryKey: ['customer-drafts', id],
+    queryFn: async (): Promise<CustomerDraft> => {
+      const response = await apiClient.get(`/customers/drafts/${id}`);
+      return response.data;
+    },
+    enabled: !!id
+  });
+}
+
+export function useSaveCustomerDraft() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (data: { id?: string; data: any; step: number }) => {
+      const response = await apiClient.post('/customers/drafts', data);
+      return response.data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['customer-drafts'] });
+    }
+  });
+}
+
+export function useDeleteCustomerDraft() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (id: string) => {
+      const response = await apiClient.delete(`/customers/drafts/${id}`);
+      return response.data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['customer-drafts'] });
+    }
+  });
+}

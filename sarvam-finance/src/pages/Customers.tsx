@@ -7,7 +7,8 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
-import { useCustomers, useUpdateCustomerStatus } from "@/hooks/use-customers";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { useCustomers, useUpdateCustomerStatus, useCustomerDrafts } from "@/hooks/use-customers";
 import { CibilScore, RiskBadge } from "@/components/customer/RiskBadge";
 import { InactiveDialog } from "@/components/customer/InactiveDialog";
 import { useToast } from "@/hooks/use-toast";
@@ -29,6 +30,7 @@ export default function Customers() {
   const navigate = useNavigate();
   const { toast } = useToast();
   const { customers, isLoading } = useCustomers();
+  const { data: drafts = [], isLoading: isDraftsLoading } = useCustomerDrafts();
   const { mutate: updateStatus } = useUpdateCustomerStatus();
   const [search, setSearch] = useState("");
   const [filter, setFilter] = useState<FilterKey>("all");
@@ -94,8 +96,15 @@ export default function Customers() {
         <SummaryCard label="High Risk" value={stats.risky} accent="text-destructive" />
       </div>
 
-      <div className="bg-card rounded-xl border border-border">
-        {/* Toolbar */}
+      <Tabs defaultValue="all" className="space-y-4">
+        <TabsList>
+          <TabsTrigger value="all">All Customers</TabsTrigger>
+          <TabsTrigger value="drafts">Partially Saved ({drafts.length})</TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="all" className="m-0">
+          <div className="bg-card rounded-xl border border-border">
+            {/* Toolbar */}
         <div className="p-4 border-b border-border space-y-3">
           <div className="flex items-center gap-3 flex-wrap">
             <div className="relative flex-1 min-w-[200px] max-w-sm">
@@ -287,7 +296,75 @@ export default function Customers() {
             </div>
           </>
         )}
-      </div>
+          </div>
+        </TabsContent>
+
+        <TabsContent value="drafts" className="m-0">
+          <div className="bg-card rounded-xl border border-border">
+            {isDraftsLoading ? (
+              <div className="p-12 text-center text-muted-foreground">Loading drafts...</div>
+            ) : drafts.length === 0 ? (
+              <div className="p-12 text-center">
+                <p className="font-medium">No saved drafts</p>
+                <p className="text-sm text-muted-foreground mt-1">
+                  Drafts will appear here when you save a customer form partially.
+                </p>
+              </div>
+            ) : (
+              <div className="overflow-x-auto">
+                <table className="w-full">
+                  <thead>
+                    <tr className="border-b border-border">
+                      <th className="text-left text-xs font-medium text-muted-foreground p-4 whitespace-nowrap">Customer</th>
+                      <th className="text-left text-xs font-medium text-muted-foreground p-4 whitespace-nowrap">Mobile</th>
+                      <th className="text-left text-xs font-medium text-muted-foreground p-4 whitespace-nowrap">Current Step</th>
+                      <th className="text-left text-xs font-medium text-muted-foreground p-4 whitespace-nowrap">Last Saved</th>
+                      <th className="text-left text-xs font-medium text-muted-foreground p-4 whitespace-nowrap">Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {drafts.map((d) => {
+                      const firstName = d.data?.firstName || "Unknown";
+                      const lastName = d.data?.lastName || "";
+                      const initials = `${firstName[0] ?? ""}${lastName[0] ?? ""}`.toUpperCase() || "?";
+                      
+                      return (
+                        <tr key={d.id} className="border-b border-border/50 hover:bg-secondary/30 transition-colors">
+                          <td className="p-4">
+                            <div className="flex items-center gap-3">
+                              <div className="w-9 h-9 rounded-full bg-primary/10 flex items-center justify-center text-sm font-semibold text-primary overflow-hidden shrink-0">
+                                {initials}
+                              </div>
+                              <div className="min-w-0">
+                                <p className="font-medium text-sm truncate">
+                                  {firstName} {lastName}
+                                </p>
+                                <p className="text-xs text-muted-foreground">Draft ID: {d.id.slice(0, 8)}</p>
+                              </div>
+                            </div>
+                          </td>
+                          <td className="p-4 text-sm whitespace-nowrap">{d.data?.mobile || "—"}</td>
+                          <td className="p-4">
+                            <Badge variant="secondary" className="font-normal">Step {d.step}</Badge>
+                          </td>
+                          <td className="p-4 text-sm text-muted-foreground whitespace-nowrap">
+                            {new Date(d.updatedAt || d.createdAt).toLocaleDateString("en-IN", { day: '2-digit', month: 'short', year: 'numeric' })}
+                          </td>
+                          <td className="p-4">
+                            <Button size="sm" variant="outline" className="h-8 gap-2 text-orange-600 border-orange-200 hover:bg-orange-50 hover:text-orange-700" onClick={() => navigate(`/customers/new?draftId=${d.id}`)}>
+                              <Edit2 className="w-3.5 h-3.5" /> Resume
+                            </Button>
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </div>
+        </TabsContent>
+      </Tabs>
 
       {inactiveTarget && (
         <InactiveDialog

@@ -10,6 +10,12 @@ import {
   addDocument,
   removeDocument
 } from '../controllers/customer.controller';
+import {
+  saveDraft,
+  getDrafts,
+  getDraftById,
+  deleteDraft
+} from '../controllers/customer-draft.controller';
 
 const router = Router();
 
@@ -17,6 +23,10 @@ const router = Router();
 router.use(authenticate);
 
 router.get('/', requirePermission('customer:view'), getCustomers);
+router.get('/drafts', requirePermission('customer:view'), getDrafts);
+router.post('/drafts', requirePermission('customer:create'), saveDraft);
+router.get('/drafts/:id', requirePermission('customer:view'), getDraftById);
+router.delete('/drafts/:id', requirePermission('customer:create'), deleteDraft);
 router.get('/:id', requirePermission('customer:view'), getCustomerById);
 router.post('/', requirePermission('customer:create'), createCustomer);
 router.put('/:id', requirePermission('customer:edit'), updateCustomer);

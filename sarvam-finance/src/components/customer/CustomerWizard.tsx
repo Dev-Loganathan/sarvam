@@ -16,7 +16,7 @@ import { calculateRisk, CustomerInput } from "@/lib/customer-store";
 import { Customer, CustomerDocument, DocumentType } from "@/lib/customer-types";
 import { DocumentUpload, PhotoUpload } from "./DocumentUpload";
 import { RiskBadge, CategoryBadge } from "./RiskBadge";
-import { useCreateCustomer, useUpdateCustomer } from "@/hooks/use-customers";
+import { useCreateCustomer, useUpdateCustomer, useSaveCustomerDraft, useDeleteCustomerDraft } from "@/hooks/use-customers";
 
 const STEPS = [
   { id: 1, title: "Basic Details", desc: "Personal info" },
@@ -31,18 +31,22 @@ type FormState = Partial<CustomerInput>;
 
 interface Props {
   initialCustomer?: Customer;
+  draftId?: string;
+  initialStep?: number;
   onComplete?: (id: string) => void;
 }
 
-export function CustomerWizard({ initialCustomer, onComplete }: Props) {
+export function CustomerWizard({ initialCustomer, draftId, initialStep, onComplete }: Props) {
   const navigate = useNavigate();
   const { toast } = useToast();
   const isEdit = !!initialCustomer;
   
   const { mutateAsync: createCustomerAsync, isPending: isCreating } = useCreateCustomer();
   const { mutateAsync: updateCustomerAsync, isPending: isUpdating } = useUpdateCustomer();
+  const { mutateAsync: saveDraftAsync, isPending: isSavingDraft } = useSaveCustomerDraft();
+  const { mutateAsync: deleteDraftAsync } = useDeleteCustomerDraft();
 
-  const [step, setStep] = useState(1);
+  const [step, setStep] = useState(initialStep ?? 1);
   const [data, setData] = useState<FormState>(initialCustomer ?? {
     gender: "male",
     maritalStatus: "single",
@@ -95,10 +99,13 @@ export function CustomerWizard({ initialCustomer, onComplete }: Props) {
     if (step > 1) setStep(step - 1);
   };
 
-  const handleSaveDraft = () => {
-    if (typeof window !== "undefined") {
-      window.localStorage.setItem("fh:customer_draft", JSON.stringify(data));
+  const handleSaveDraft = async () => {
+    try {
+      await saveDraftAsync({ id: draftId, data, step });
       toast({ title: "Draft saved", description: "You can resume later" });
+      navigate('/customers?tab=drafts');
+    } catch (e: any) {
+      toast({ title: "Failed to save draft", description: String(e), variant: "destructive" });
     }
   };
 
@@ -112,8 +119,10 @@ export function CustomerWizard({ initialCustomer, onComplete }: Props) {
         navigate(`/customers`);
       } else {
         const c = await createCustomerAsync(data as Partial<Customer>);
+        if (draftId) {
+          try { await deleteDraftAsync(draftId); } catch (err) {}
+        }
         toast({ title: "Customer created", description: `${c.customerCode} • ${c.firstName}` });
-        window.localStorage.removeItem("fh:customer_draft");
         onComplete?.(c.id);
         navigate(`/customers`);
       }
@@ -131,6 +140,7 @@ export function CustomerWizard({ initialCustomer, onComplete }: Props) {
   const getDoc = (type: DocumentType) => data.documents?.find((d) => d.type === type);
 
   const progress = (step / 6) * 100;
+  const isStep1Valid = step1Schema.safeParse(data).success;
 
   return (
     <div className="space-y-6">
@@ -191,23 +201,23 @@ export function CustomerWizard({ initialCustomer, onComplete }: Props) {
       </div>
 
       {/* Sticky actions */}
-      <div className="sticky bottom-0 bg-background/95 backdrop-blur-sm border-t border-border -mx-6 px-6 py-4 flex items-center justify-between gap-3">
-        <Button variant="outline" onClick={handleBack} disabled={step === 1} className="gap-2">
+      <div className="sticky bottom-0 bg-background/95 backdrop-blur-sm border-t border-border -mx-6 px-6 py-4 flex items-center justify-between gap-3 z-10">
+        <Button variant="outline" onClick={handleBack} disabled={step === 1 || isSavingDraft || isCreating || isUpdating} className="gap-2">
           <ChevronLeft className="w-4 h-4" /> Back
         </Button>
         <div className="flex gap-2">
           {!isEdit && (
-            <Button variant="ghost" onClick={handleSaveDraft} className="gap-2">
-              <Save className="w-4 h-4" /> Save Draft
+            <Button variant="ghost" onClick={handleSaveDraft} disabled={isSavingDraft || isCreating || isUpdating || !isStep1Valid} className="gap-2">
+              {isSavingDraft ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />} Save Draft
             </Button>
           )}
           {step < 6 ? (
-            <Button onClick={handleNext} className="gap-2">
+            <Button onClick={handleNext} disabled={isSavingDraft || isCreating || isUpdating} className="gap-2">
               Next <ChevronRight className="w-4 h-4" />
             </Button>
           ) : (
-            <Button onClick={handleSubmit} className="gap-2">
-              <Check className="w-4 h-4" /> {isEdit ? "Save Changes" : "Create Customer"}
+            <Button onClick={handleSubmit} disabled={isSavingDraft || isCreating || isUpdating} className="gap-2">
+              {(isCreating || isUpdating) ? <Loader2 className="w-4 h-4 animate-spin" /> : <Check className="w-4 h-4" />} {isEdit ? "Save Changes" : "Create Customer"}
             </Button>
           )}
         </div>
