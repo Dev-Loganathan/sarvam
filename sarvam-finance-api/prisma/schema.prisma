@@ -21,6 +21,8 @@ model Customer {
   
   currentAddress   String
   permanentAddress String
+  country          String?            @default("India")
+  district         String?
   city             String
   state            String
   pincode          String
@@ -173,4 +175,49 @@ model PasswordHistory {
   user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   passwordHash String
   createdAt    DateTime @default(now())
+}
+
+// ─── Location Master Tables ───────────────────────────────────
+
+model CountryMaster {
+  id        String        @id @default(uuid())
+  code      String        @unique
+  name      String        @unique
+  isActive  Boolean       @default(true)
+  states    StateMaster[]
+  createdAt DateTime      @default(now())
+}
+
+model StateMaster {
+  id        String           @id @default(uuid())
+  code      String
+  name      String
+  countryId String
+  country   CountryMaster    @relation(fields: [countryId], references: [id], onDelete: Cascade)
+  cities    CityMaster[]
+  districts DistrictMaster[]
+  createdAt DateTime         @default(now())
+
+  @@unique([countryId, code])
+  @@unique([countryId, name])
+}
+
+model CityMaster {
+  id        String      @id @default(uuid())
+  name      String
+  stateId   String
+  state     StateMaster @relation(fields: [stateId], references: [id], onDelete: Cascade)
+  createdAt DateTime    @default(now())
+
+  @@unique([stateId, name])
+}
+
+model DistrictMaster {
+  id        String      @id @default(uuid())
+  name      String
+  stateId   String
+  state     StateMaster @relation(fields: [stateId], references: [id], onDelete: Cascade)
+  createdAt DateTime    @default(now())
+
+  @@unique([stateId, name])
 }

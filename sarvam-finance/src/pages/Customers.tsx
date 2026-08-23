@@ -96,14 +96,23 @@ export default function Customers() {
         <SummaryCard label="High Risk" value={stats.risky} accent="text-destructive" />
       </div>
 
-      <Tabs defaultValue="all" className="space-y-4">
-        <TabsList>
-          <TabsTrigger value="all">All Customers</TabsTrigger>
-          <TabsTrigger value="drafts">Partially Saved ({drafts.length})</TabsTrigger>
+      <Tabs defaultValue="all" className="bg-card rounded-xl border border-border overflow-hidden">
+        <TabsList className="flex w-full justify-start border-b border-border bg-transparent p-0 h-auto rounded-none shadow-none">
+          <TabsTrigger 
+            value="all" 
+            className="rounded-none data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-none px-6 py-3.5 font-medium text-muted-foreground hover:text-foreground data-[state=inactive]:bg-transparent"
+          >
+            All Customers
+          </TabsTrigger>
+          <TabsTrigger 
+            value="drafts" 
+            className="rounded-none data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-none px-6 py-3.5 font-medium text-muted-foreground hover:text-foreground data-[state=inactive]:bg-transparent"
+          >
+            Partially Saved ({drafts.length})
+          </TabsTrigger>
         </TabsList>
 
         <TabsContent value="all" className="m-0">
-          <div className="bg-card rounded-xl border border-border">
             {/* Toolbar */}
         <div className="p-4 border-b border-border space-y-3">
           <div className="flex items-center gap-3 flex-wrap">
@@ -117,7 +126,7 @@ export default function Customers() {
               />
             </div>
             <Button variant="outline" size="sm" className="gap-2">
-              <Filter className="w-4 h-4" /> Filters
+              <Search className="w-4 h-4" /> Search
             </Button>
           </div>
           <div className="flex items-center gap-2 flex-wrap">
@@ -296,11 +305,9 @@ export default function Customers() {
             </div>
           </>
         )}
-          </div>
         </TabsContent>
 
         <TabsContent value="drafts" className="m-0">
-          <div className="bg-card rounded-xl border border-border">
             {isDraftsLoading ? (
               <div className="p-12 text-center text-muted-foreground">Loading drafts...</div>
             ) : drafts.length === 0 ? (
@@ -362,7 +369,6 @@ export default function Customers() {
                 </table>
               </div>
             )}
-          </div>
         </TabsContent>
       </Tabs>
 

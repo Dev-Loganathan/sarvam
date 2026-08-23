@@ -7,7 +7,12 @@ import { useCustomers } from "@/hooks/use-customers";
 export default function CustomerEdit() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const customer = useCustomers().find((c) => c.id === id);
+  const { customers, isLoading } = useCustomers();
+  const customer = customers.find((c) => c.id === id);
+
+  if (isLoading) {
+    return <div className="text-center py-16 text-muted-foreground">Loading...</div>;
+  }
 
   if (!customer) {
     return (

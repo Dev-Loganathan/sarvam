@@ -68,6 +68,7 @@ export interface Customer {
   // Step 2
   currentAddress: string;
   permanentAddress: string;
+  country?: string;
   city: string;
   state: string;
   pincode: string;

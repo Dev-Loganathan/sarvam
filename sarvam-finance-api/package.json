@@ -6,6 +6,9 @@
     "dev": "nodemon src/index.ts",
     "build": "npx prisma generate && tsc",
     "start": "node dist/index.js",
+    "seed:india": "npx tsx src/scripts/seed-india-masters.ts",
+    "seed:online": "npx tsx src/scripts/fetch-and-seed-online-districts.ts",
+    "seed:districts": "npx tsx src/scripts/seed-official-districts.ts",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "keywords": [],

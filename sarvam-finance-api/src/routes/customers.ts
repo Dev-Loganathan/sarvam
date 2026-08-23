@@ -18,7 +18,6 @@ import {
 } from '../controllers/customer-draft.controller';
 
 const router = Router();
-
 // All customer routes require authentication
 router.use(authenticate);
 

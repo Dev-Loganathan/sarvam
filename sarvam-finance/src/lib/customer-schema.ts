@@ -24,8 +24,9 @@ export const step1Schema = z.object({
 export const step2Schema = z.object({
   currentAddress: z.string().trim().min(5, "Required").max(300),
   permanentAddress: z.string().trim().min(5, "Required").max(300),
-  city: z.string().trim().min(2, "Required").max(80),
-  state: z.string().trim().min(2, "Required").max(80),
+  country: z.string().trim().min(2, "Country is required").max(80),
+  state: z.string().trim().min(2, "State is required").max(80),
+  city: z.string().trim().min(2, "City is required").max(80),
   pincode: z.string().regex(pincodeRegex, "6-digit pincode"),
   landmark: z.string().trim().max(120).nullish().or(z.literal("")),
   residenceType: z.enum(["own", "rent", "family"]),

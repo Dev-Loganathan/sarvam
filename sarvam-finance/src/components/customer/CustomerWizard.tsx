@@ -1,6 +1,7 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Check, ChevronLeft, ChevronRight, Save, Loader2 } from "lucide-react";
+import axios from "axios";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -15,8 +16,10 @@ import {
 import { calculateRisk, CustomerInput } from "@/lib/customer-store";
 import { Customer, CustomerDocument, DocumentType } from "@/lib/customer-types";
 import { DocumentUpload, PhotoUpload } from "./DocumentUpload";
+import { DatePicker } from "@/components/global/DatePicker";
 import { RiskBadge, CategoryBadge } from "./RiskBadge";
 import { useCreateCustomer, useUpdateCustomer, useSaveCustomerDraft, useDeleteCustomerDraft } from "@/hooks/use-customers";
+import { useCountries, useStates, useDistricts } from "@/hooks/use-location-masters";
 
 const STEPS = [
   { id: 1, title: "Basic Details", desc: "Personal info" },
@@ -48,6 +51,7 @@ export function CustomerWizard({ initialCustomer, draftId, initialStep, onComple
 
   const [step, setStep] = useState(initialStep ?? 1);
   const [data, setData] = useState<FormState>(initialCustomer ?? {
+    country: "India",
     gender: "male",
     maritalStatus: "single",
     residenceType: "own",
@@ -59,6 +63,18 @@ export function CustomerWizard({ initialCustomer, draftId, initialStep, onComple
     monthlySalary: 0,
   });
   const [errors, setErrors] = useState<Record<string, string>>({});
+
+  useEffect(() => {
+    if (initialCustomer) {
+      setData(initialCustomer);
+    }
+  }, [initialCustomer]);
+
+  useEffect(() => {
+    if (initialStep) {
+      setStep(initialStep);
+    }
+  }, [initialStep]);
 
   const update = <K extends keyof CustomerInput>(key: K, value: CustomerInput[K]) => {
     setData((d) => ({ ...d, [key]: value }));
@@ -104,30 +120,50 @@ export function CustomerWizard({ initialCustomer, draftId, initialStep, onComple
       await saveDraftAsync({ id: draftId, data, step });
       toast({ title: "Draft saved", description: "You can resume later" });
       navigate('/customers?tab=drafts');
-    } catch (e: any) {
-      toast({ title: "Failed to save draft", description: String(e), variant: "destructive" });
+    } catch (e: unknown) {
+      const msg = axios.isAxiosError(e)
+        ? (e.response?.data?.error || e.message)
+        : (e instanceof Error ? e.message : String(e));
+      toast({ title: "Failed to save draft", description: msg, variant: "destructive" });
     }
   };
 
   const handleSubmit = async () => {
     if (!validateStep()) return;
     try {
+      const income = (data.monthlySalary ?? 0) + (data.additionalIncome ?? 0);
+      const calc = calculateRisk(data.cibilScore ?? 700, income, data.monthlyEmi ?? 0);
+      const payload: Partial<Customer> = {
+        ...data,
+        riskLevel: calc.risk,
+        category: calc.category,
+      };
+
       if (isEdit && initialCustomer) {
-        await updateCustomerAsync({ id: initialCustomer.id, data: data as Partial<Customer> });
-        toast({ title: "Customer updated", description: data.firstName });
+        await updateCustomerAsync({ id: initialCustomer.id, data: payload });
+        toast({ title: "Customer updated", description: data.firstName || "Customer profile" });
         onComplete?.(initialCustomer.id);
         navigate(`/customers`);
       } else {
-        const c = await createCustomerAsync(data as Partial<Customer>);
+        const c = await createCustomerAsync(payload);
         if (draftId) {
-          try { await deleteDraftAsync(draftId); } catch (err) {}
+          try {
+            await deleteDraftAsync(draftId);
+          } catch (err) {
+            console.warn("Failed to cleanup draft after creation:", err);
+          }
         }
-        toast({ title: "Customer created", description: `${c.customerCode} • ${c.firstName}` });
+        toast({ title: "Customer created", description: `${c.customerCode || ""} • ${c.firstName || ""}` });
         onComplete?.(c.id);
         navigate(`/customers`);
       }
-    } catch (e: any) {
-      const serverMsg = e.response?.data?.details || e.response?.data?.error || String(e);
+    } catch (e: unknown) {
+      let serverMsg = "An error occurred while saving.";
+      if (axios.isAxiosError(e)) {
+        serverMsg = e.response?.data?.details || e.response?.data?.error || e.message;
+      } else if (e instanceof Error) {
+        serverMsg = e.message;
+      }
       toast({ title: "Error", description: serverMsg, variant: "destructive" });
     }
   };
@@ -140,7 +176,6 @@ export function CustomerWizard({ initialCustomer, draftId, initialStep, onComple
   const getDoc = (type: DocumentType) => data.documents?.find((d) => d.type === type);
 
   const progress = (step / 6) * 100;
-  const isStep1Valid = step1Schema.safeParse(data).success;
 
   return (
     <div className="space-y-6">
@@ -207,7 +242,7 @@ export function CustomerWizard({ initialCustomer, draftId, initialStep, onComple
         </Button>
         <div className="flex gap-2">
           {!isEdit && (
-            <Button variant="ghost" onClick={handleSaveDraft} disabled={isSavingDraft || isCreating || isUpdating || !isStep1Valid} className="gap-2">
+            <Button variant="ghost" onClick={handleSaveDraft} disabled={isSavingDraft || isCreating || isUpdating} className="gap-2">
               {isSavingDraft ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />} Save Draft
             </Button>
           )}
@@ -260,8 +295,8 @@ function Step1({ data, errors, update }: StepProps) {
           <Input value={data.lastName ?? ""} onChange={(e) => update("lastName", e.target.value)} />
         </Field>
         <Field label="Gender" required error={errors.gender}>
-          <Select value={data.gender} onValueChange={(v) => update("gender", v as Customer["gender"])}>
-            <SelectTrigger><SelectValue /></SelectTrigger>
+          <Select value={data.gender || undefined} onValueChange={(v) => update("gender", v as Customer["gender"])}>
+            <SelectTrigger><SelectValue placeholder="Select Gender" /></SelectTrigger>
             <SelectContent>
               <SelectItem value="male">Male</SelectItem>
               <SelectItem value="female">Female</SelectItem>
@@ -270,7 +305,21 @@ function Step1({ data, errors, update }: StepProps) {
           </Select>
         </Field>
         <Field label="Date of Birth" required error={errors.dob}>
-          <Input type="date" value={data.dob ?? ""} onChange={(e) => update("dob", e.target.value)} />
+          <DatePicker
+            context="dob"
+            date={data.dob ? new Date(data.dob) : undefined}
+            setDate={(d) => {
+              if (d) {
+                const year = d.getFullYear();
+                const month = String(d.getMonth() + 1).padStart(2, '0');
+                const day = String(d.getDate()).padStart(2, '0');
+                update("dob", `${year}-${month}-${day}`);
+              } else {
+                update("dob", "");
+              }
+            }}
+            placeholder="Select Date of Birth"
+          />
           {data.dob && (
             <p className="text-xs text-muted-foreground mt-1">
               Age: {Math.floor((Date.now() - new Date(data.dob).getTime()) / (365.25 * 24 * 3600 * 1000))} years
@@ -287,8 +336,8 @@ function Step1({ data, errors, update }: StepProps) {
           <Input type="email" value={data.email ?? ""} onChange={(e) => update("email", e.target.value)} />
         </Field>
         <Field label="Marital Status" required error={errors.maritalStatus}>
-          <Select value={data.maritalStatus} onValueChange={(v) => update("maritalStatus", v as Customer["maritalStatus"])}>
-            <SelectTrigger><SelectValue /></SelectTrigger>
+          <Select value={data.maritalStatus || undefined} onValueChange={(v) => update("maritalStatus", v as Customer["maritalStatus"])}>
+            <SelectTrigger><SelectValue placeholder="Select Marital Status" /></SelectTrigger>
             <SelectContent>
               <SelectItem value="single">Single</SelectItem>
               <SelectItem value="married">Married</SelectItem>
@@ -304,6 +353,32 @@ function Step1({ data, errors, update }: StepProps) {
 
 /* --------- Step 2 --------- */
 function Step2({ data, errors, update }: StepProps) {
+  const currentCountry = data.country || "India";
+  const currentState = data.state || "";
+  const currentDistrict = data.city || "";
+
+  const { countries } = useCountries();
+  const { states } = useStates(currentCountry);
+  const { districts } = useDistricts(currentCountry, currentState);
+
+  const isStateDisabled = !currentCountry;
+  const isDistrictDisabled = !currentCountry || !currentState;
+
+  const handleCountryChange = (val: string) => {
+    update("country", val);
+    update("state", "");
+    update("city", "");
+  };
+
+  const handleStateChange = (val: string) => {
+    update("state", val);
+    update("city", "");
+  };
+
+  const handleDistrictChange = (val: string) => {
+    update("city", val);
+  };
+
   return (
     <div className="space-y-4">
       <Field label="Current Address" required error={errors.currentAddress}>
@@ -321,22 +396,68 @@ function Step2({ data, errors, update }: StepProps) {
       <Field label="Permanent Address" required error={errors.permanentAddress}>
         <Textarea rows={2} value={data.permanentAddress ?? ""} onChange={(e) => update("permanentAddress", e.target.value)} />
       </Field>
+
       <div className="grid md:grid-cols-3 gap-4">
-        <Field label="City" required error={errors.city}>
-          <Input value={data.city ?? ""} onChange={(e) => update("city", e.target.value)} />
+        {/* Country Master */}
+        <Field label="Country" required error={errors.country}>
+          <Select value={currentCountry || undefined} onValueChange={handleCountryChange}>
+            <SelectTrigger><SelectValue placeholder="Select Country" /></SelectTrigger>
+            <SelectContent>
+              {countries.map((c) => (
+                <SelectItem key={c} value={c}>{c}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
         </Field>
+
+        {/* State Master */}
         <Field label="State" required error={errors.state}>
-          <Input value={data.state ?? ""} onChange={(e) => update("state", e.target.value)} />
+          <Select
+            disabled={isStateDisabled}
+            value={currentState || undefined}
+            onValueChange={handleStateChange}
+          >
+            <SelectTrigger disabled={isStateDisabled}>
+              <SelectValue placeholder={isStateDisabled ? "Select Country first" : "Select State"} />
+            </SelectTrigger>
+            <SelectContent>
+              {states.map((s) => (
+                <SelectItem key={s} value={s}>{s}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
         </Field>
+
+        {/* District / City Master */}
+        <Field label="District / City" required error={errors.city}>
+          <Select
+            disabled={isDistrictDisabled}
+            value={currentDistrict || undefined}
+            onValueChange={handleDistrictChange}
+          >
+            <SelectTrigger disabled={isDistrictDisabled}>
+              <SelectValue placeholder={!currentCountry ? "Select Country first" : !currentState ? "Select State first" : "Select District"} />
+            </SelectTrigger>
+            <SelectContent>
+              {districts.map((d) => (
+                <SelectItem key={d} value={d}>{d}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </Field>
+
+        {/* Pincode */}
         <Field label="Pincode" required error={errors.pincode}>
           <Input value={data.pincode ?? ""} maxLength={6} onChange={(e) => update("pincode", e.target.value.replace(/\D/g, ""))} />
         </Field>
+        {/* Landmark */}
         <Field label="Landmark" error={errors.landmark}>
           <Input value={data.landmark ?? ""} onChange={(e) => update("landmark", e.target.value)} />
         </Field>
+        {/* Residence Type */}
         <Field label="Residence Type" required error={errors.residenceType}>
-          <Select value={data.residenceType} onValueChange={(v) => update("residenceType", v as Customer["residenceType"])}>
-            <SelectTrigger><SelectValue /></SelectTrigger>
+          <Select value={data.residenceType || undefined} onValueChange={(v) => update("residenceType", v as Customer["residenceType"])}>
+            <SelectTrigger><SelectValue placeholder="Select Residence Type" /></SelectTrigger>
             <SelectContent>
               <SelectItem value="own">Own</SelectItem>
               <SelectItem value="rent">Rent</SelectItem>
@@ -381,14 +502,7 @@ function Step3({
           <p className="text-sm text-destructive mb-3">{errors.aadhaar_doc}</p>
         )}
         <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
-          <div>
-            <div className="flex items-center gap-1 mb-1">
-              <span className="text-xs font-medium text-muted-foreground">Aadhaar Front</span>
-              <span className="text-destructive text-xs">*</span>
-            </div>
-            <DocumentUpload type={"aadhaar_front" as DocumentType} value={getDoc("aadhaar_front" as DocumentType)} onChange={(d) => setDoc("aadhaar_front" as DocumentType, d)} />
-          </div>
-          {(["aadhaar_back","pan_card","selfie","signature","address_proof","additional"] as DocumentType[]).map((t) => (
+          {(["aadhaar_front", "aadhaar_back", "pan_card", "selfie", "signature", "address_proof", "additional"] as DocumentType[]).map((t) => (
             <DocumentUpload key={t} type={t} value={getDoc(t)} onChange={(d) => setDoc(t, d)} />
           ))}
         </div>
@@ -403,8 +517,8 @@ function Step4({ data, errors, update }: StepProps) {
     <div className="space-y-5">
       <div className="grid md:grid-cols-2 gap-4">
         <Field label="Occupation Type" required error={errors.occupationType}>
-          <Select value={data.occupationType} onValueChange={(v) => update("occupationType", v)}>
-            <SelectTrigger><SelectValue /></SelectTrigger>
+          <Select value={data.occupationType || undefined} onValueChange={(v) => update("occupationType", v)}>
+            <SelectTrigger><SelectValue placeholder="Select Occupation" /></SelectTrigger>
             <SelectContent>
               <SelectItem value="Salaried">Salaried</SelectItem>
               <SelectItem value="Self-employed">Self-employed</SelectItem>
@@ -425,10 +539,18 @@ function Step4({ data, errors, update }: StepProps) {
           <Input value={data.workExperience ?? ""} onChange={(e) => update("workExperience", e.target.value)} placeholder="e.g. 5 years" />
         </Field>
         <Field label="Monthly Salary (₹)" required error={errors.monthlySalary}>
-          <Input type="number" value={data.monthlySalary ?? 0} onChange={(e) => update("monthlySalary", Number(e.target.value))} />
+          <Input
+            type="number"
+            value={data.monthlySalary ?? ""}
+            onChange={(e) => update("monthlySalary", e.target.value === "" ? 0 : Number(e.target.value))}
+          />
         </Field>
         <Field label="Additional Income (₹)" error={errors.additionalIncome}>
-          <Input type="number" value={data.additionalIncome ?? 0} onChange={(e) => update("additionalIncome", Number(e.target.value))} />
+          <Input
+            type="number"
+            value={data.additionalIncome ?? ""}
+            onChange={(e) => update("additionalIncome", e.target.value === "" ? 0 : Number(e.target.value))}
+          />
         </Field>
         <Field label="Business Name (if self-employed)" error={errors.businessName}>
           <Input value={data.businessName ?? ""} onChange={(e) => update("businessName", e.target.value)} />
@@ -509,13 +631,29 @@ function Step6({ data, errors, update }: StepProps) {
     <div className="space-y-6">
       <div className="grid md:grid-cols-3 gap-4">
         <Field label="CIBIL Score (300-900)" required error={errors.cibilScore}>
-          <Input type="number" value={data.cibilScore ?? 700} min={300} max={900} onChange={(e) => update("cibilScore", Number(e.target.value))} />
+          <Input
+            type="number"
+            value={data.cibilScore ?? ""}
+            min={300}
+            max={900}
+            onChange={(e) => update("cibilScore", e.target.value === "" ? 700 : Number(e.target.value))}
+          />
         </Field>
         <Field label="Existing Loans" required error={errors.existingLoans}>
-          <Input type="number" value={data.existingLoans ?? 0} min={0} onChange={(e) => update("existingLoans", Number(e.target.value))} />
+          <Input
+            type="number"
+            value={data.existingLoans ?? ""}
+            min={0}
+            onChange={(e) => update("existingLoans", e.target.value === "" ? 0 : Number(e.target.value))}
+          />
         </Field>
         <Field label="Monthly EMI (₹)" required error={errors.monthlyEmi}>
-          <Input type="number" value={data.monthlyEmi ?? 0} min={0} onChange={(e) => update("monthlyEmi", Number(e.target.value))} />
+          <Input
+            type="number"
+            value={data.monthlyEmi ?? ""}
+            min={0}
+            onChange={(e) => update("monthlyEmi", e.target.value === "" ? 0 : Number(e.target.value))}
+          />
         </Field>
       </div>
       <div className="rounded-xl border border-border bg-secondary/30 p-5 space-y-4">

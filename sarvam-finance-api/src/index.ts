@@ -8,6 +8,7 @@ dotenv.config();
 import customerRoutes from './routes/customers';
 import authRoutes from './routes/auth';
 import userRoutes from './routes/users';
+import masterRoutes from './routes/masters';
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -39,6 +40,7 @@ app.use(cookieParser());
 app.use('/api/auth', authRoutes);
 app.use('/api/customers', customerRoutes);
 app.use('/api/users', userRoutes);
+app.use('/api/masters', masterRoutes);
 
 app.get('/api/health', (req, res) => {
   res.json({ status: 'ok', message: 'Sarvam Finance API is running' });
